@@ -3,7 +3,9 @@ import spotipy
 from spotipy.oauth2 import SpotifyClientCredentials
 from dotenv import load_dotenv
 import networkx as nx
-
+from pyvis.network import Network
+import matplotlib.pyplot as plt
+import numpy as np
 
 load_dotenv('../featuring_network.env')
 client = os.getenv('SPOTIFY_CLIENT', 'client')
@@ -55,20 +57,41 @@ def get_albums(artist, type='single', limit=20, country='US'):
  
 
 
+def random_walk(graph, parent, n_steps, query_limit=10, album_type='single'):
+    """
+    """
+    artist_node = search_artist(parent)
+    add_artist(graph, artist_node)
+    random_walk = []
+
+    while len(random_walk) < n_steps:
+        singles = get_albums(graph.nodes[parent], type=album_type, limit=query_limit)
+        random_walk.append(parent)
+        neighbors = []
+        # add edges
+        for single in singles['items']:
+            for artist in single['artists']:
+                if artist['name'] not in graph and artist['name']!=parent:
+                    add_artist(graph, artist)
+                    add_song(parent, artist['name'], single)
+                    neighbors.append(artist['name'])
+        # pick next node
+        # allow backtracking
+        neighbors.append(parent)
+        parent = np.random.choice(list(neighbors), 1)[0]
+
+    print(list(graph.nodes))
+    print(list(graph.edges))
+    return random_walk
+
+
 graph = nx.Graph()
-seed = 'Drake'
-drake = search_artist(seed)
-print(drake)
-add_artist(graph, drake)
-print(list(graph.nodes))
-singles = get_albums(graph.nodes[seed], type='single', limit=30)
+random_walk(graph, 'Drake', 10)
 
-for single in singles['items']:
-    for artist in single['artists']:
-        if artist['name'] not in graph and artist['name']!=seed:
-            add_artist(graph, artist)
-            add_song(seed, artist['name'], single)
+nx.draw(graph, with_labels = True)
 
-
-print(list(graph.nodes))
-print(list(graph.edges))
+# Set margins for the axes so that nodes aren't clipped
+ax = plt.gca()
+ax.margins(0.20)
+plt.axis("off")
+plt.show()
