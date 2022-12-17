@@ -86,12 +86,52 @@ def random_walk(graph, parent, n_steps, query_limit=10, album_type='single'):
 
 
 graph = nx.Graph()
-random_walk(graph, 'Drake', 10)
+path = random_walk(graph, 'Drake', 10)
 
-nx.draw(graph, with_labels = True)
+nodes = []
+for node in list(graph.nodes):
+    data = {'data':{'id': node, 'label': node}}
+    if node in path:
+        data['classes']='red'
+    nodes.append(data)
 
-# Set margins for the axes so that nodes aren't clipped
-ax = plt.gca()
-ax.margins(0.20)
-plt.axis("off")
-plt.show()
+# nodes = [{'data':{'id': node, 'label': node}} for node in list(graph.nodes)]
+edges = [{'data':{'source': edge[0], 'target': edge[1], 'label':'single'}} for edge in list(graph.edges)]
+data = nodes
+data.extend(edges)
+
+from dash import Dash, html
+import dash_cytoscape as cyto
+
+app = Dash(__name__)
+
+app.layout = html.Div([
+    html.P("Dash Cytoscape:"),
+    cyto.Cytoscape(
+        id='cytoscape',
+        elements=data,
+        layout={'name': 'cose'},
+        style={'width': '400px', 'height': '500px'},
+        stylesheet=[
+            # Group selectors
+            {
+                'selector': 'node',
+                'style': {
+                    'content': 'data(label)'
+                }
+            },
+
+            # Class selectors
+            {
+                'selector': '.red',
+                'style': {
+                    'background-color': 'red',
+                    'line-color': 'red'
+                }
+            }
+        ]
+    )
+])
+
+
+app.run_server(debug=True)
