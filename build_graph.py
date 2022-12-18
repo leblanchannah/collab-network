@@ -6,7 +6,6 @@ import spotipy
 from spotipy.oauth2 import SpotifyClientCredentials
 
 import networkx as nx
-import matplotlib.pyplot as plt
 import numpy as np
 
 from dash import Dash, html, dcc
@@ -156,111 +155,111 @@ def networkx_to_cyto(graph, path):
     return nodes, edges
 
 N_STEPS = 10
-def main():
 
-    load_dotenv('../featuring_network.env')
-    client = os.getenv('SPOTIFY_CLIENT', 'client')
-    secret = os.getenv('SPOTIFY_SECRET', 'secret')
 
-    sp = spotipy.Spotify(auth_manager=SpotifyClientCredentials(client_id=client, client_secret=secret))
+load_dotenv('../featuring_network.env')
+client = os.getenv('SPOTIFY_CLIENT', 'client')
+secret = os.getenv('SPOTIFY_SECRET', 'secret')
 
-    graph = nx.Graph()
-    path = random_walk(graph, sp, 'Elton John', N_STEPS)
+sp = spotipy.Spotify(auth_manager=SpotifyClientCredentials(client_id=client, client_secret=secret))
 
-    nodes, edges = networkx_to_cyto(graph, path)
+graph = nx.Graph()
+path = random_walk(graph, sp, 'Elton John', N_STEPS)
 
-    data = nodes
-    data.extend(edges)
+nodes, edges = networkx_to_cyto(graph, path)
 
-    # dash app
-    app = Dash(__name__, external_stylesheets=[dbc.themes.BOOTSTRAP])
+data = nodes
+data.extend(edges)
 
-    app.layout = dbc.Container([
-        dbc.Row([
-            dbc.Col([
-                html.H1("Collaboration Network", style={'textAlign': 'left'})
-            ], width=12)
-        ]),
-        dbc.Row([
-            dbc.Col([
-                html.P("Random walk length: "+ str(N_STEPS)),
-                dcc.Dropdown(['Drake', 'Snoop Dogg', 'Elton John', 'Kendrick Lamar', 'Britney Spears'], 'Drake', id='artist-dropdown'),
-            ], width=4),
-            dbc.Col(
-                html.Div(
-                    style={'border':'2px black solid'},
-                    children=[
-                        cyto.Cytoscape(
-                            id='cytoscape',
-                            elements=[],
-                            layout={'name': 'cose'},
-                            responsive=True,
-                            stylesheet=[
-                                # Group selectors
-                                {
-                                    'selector': 'node',
-                                    'style': {
-                                        'content': 'data(label)',
-                                        'color': '#000000',
-                                        'background-color': '#d8d8d8'  
-                                    }
-                                },
-                                # Class selectors
-                                {
-                                    'selector': '.path',
-                                    'style': {
-                                        'background-color': '#ffa600',
-                                        'line-color': '#ffa600'
-                                    }
-                                },
-                                {
-                                    'selector': '.basic',
-                                    'style': {
-                                        'background-color': '#2f4b7c',
-                                        'line-color': '#2f4b7c'
-                                    }
-                                },
-                                {
-                                    'selector': '.anchor',
-                                    'style': {
-                                        'background-color': '#f95d6a',
-                                        'line-color': '#f95d6a'
-                                    }
+# dash app
+app = Dash(__name__, external_stylesheets=[dbc.themes.BOOTSTRAP])
+
+app.layout = dbc.Container([
+    dbc.Row([
+        dbc.Col([
+            html.H1("Collaboration Network", style={'textAlign': 'left'})
+        ], width=12)
+    ]),
+    dbc.Row([
+        dbc.Col([
+            html.P("Random walk length: "+ str(N_STEPS)),
+            dcc.Dropdown(['Drake', 'Snoop Dogg', 'Elton John', 'Kendrick Lamar', 'Britney Spears'], 'Drake', id='artist-dropdown'),
+        ], width=4),
+        dbc.Col(
+            html.Div(
+                style={'border':'2px black solid'},
+                children=[
+                    cyto.Cytoscape(
+                        id='cytoscape',
+                        elements=[],
+                        layout={'name': 'cose'},
+                        responsive=True,
+                        stylesheet=[
+                            # Group selectors
+                            {
+                                'selector': 'node',
+                                'style': {
+                                    'content': 'data(label)',
+                                    'color': '#000000',
+                                    'background-color': '#d8d8d8'  
                                 }
-                            ]
-                    )]
-                ), width=8   
-        )])
-    ]   
+                            },
+                            # Class selectors
+                            {
+                                'selector': '.path',
+                                'style': {
+                                    'background-color': '#ffa600',
+                                    'line-color': '#ffa600'
+                                }
+                            },
+                            {
+                                'selector': '.basic',
+                                'style': {
+                                    'background-color': '#2f4b7c',
+                                    'line-color': '#2f4b7c'
+                                }
+                            },
+                            {
+                                'selector': '.anchor',
+                                'style': {
+                                    'background-color': '#f95d6a',
+                                    'line-color': '#f95d6a'
+                                }
+                            }
+                        ]
+                )]
+            ), width=8   
+    )])
+]   
 )
 
 
 
 
-    @app.callback(
-        Output("cytoscape", "elements"),
-        Input('artist-dropdown', 'value'),
-        State("cytoscape", "elements"),
+@app.callback(
+    Output("cytoscape", "elements"),
+    Input('artist-dropdown', 'value'),
+    State("cytoscape", "elements"),
 
-    )
-    def update_output(value, el):
-        #https://community.plotly.com/t/remove-all-elements-in-cytoscape/51810/5
-        client = os.getenv('SPOTIFY_CLIENT', 'client')
-        secret = os.getenv('SPOTIFY_SECRET', 'secret')
+)
+def update_output(value, el):
+    #https://community.plotly.com/t/remove-all-elements-in-cytoscape/51810/5
+    client = os.getenv('SPOTIFY_CLIENT', 'client')
+    secret = os.getenv('SPOTIFY_SECRET', 'secret')
 
-        sp = spotipy.Spotify(auth_manager=SpotifyClientCredentials(client_id=client, client_secret=secret))
-        graph = nx.Graph()
-        path = random_walk(graph, sp, value, N_STEPS)
+    sp = spotipy.Spotify(auth_manager=SpotifyClientCredentials(client_id=client, client_secret=secret))
+    graph = nx.Graph()
+    path = random_walk(graph, sp, value, N_STEPS)
 
-        nodes, edges = networkx_to_cyto(graph, path)
+    nodes, edges = networkx_to_cyto(graph, path)
 
-        data = nodes
-        data.extend(edges)
-        elements = data
-        return elements 
+    data = nodes
+    data.extend(edges)
+    elements = data
+    return elements 
 
-    app.run_server(debug=False)
+
 
 
 if __name__ == "__main__":
-    main()
+    app.run_server(debug=False)
