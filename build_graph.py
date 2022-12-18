@@ -31,7 +31,7 @@ def add_artist(graph: nx.Graph, artist: Dict) -> None:
 def add_song(graph, artist_parent, artist_child, song_data) -> None:
     """ Adds new collaboration edge between two artist nodes
     Args:
-        graph:
+        graph: graph object to add new collaboration edge to
         artist_parent: source node
         artist_child: target node
         song_data: song data from Spotify API
@@ -82,7 +82,7 @@ def get_albums(artist: nx.Graph, sp, type: str='single', limit: int=20, country:
  
 
 
-def random_walk(graph: nx.Graph, sp, parent: str, n_steps: int, query_limit: int=10, album_type: str='single') -> List:
+def random_walk(graph: nx.Graph, sp, parent: str, n_steps: int, query_limit: int=20, album_type: str='single') -> List:
     """ Using artist name as seed for random walk of Spotify API calls.
     Retrieves song and features (if found) from Spotify call and adds 
     new neighbor nodes and edges to graph.
@@ -129,10 +129,16 @@ def networkx_to_cyto(graph, path):
 
     """
     nodes = []
-    for node in list(graph.nodes):
+    nx_node_data = list(graph.nodes)
+    n_steps = len(nx_node_data)
+    for i, node in enumerate(nx_node_data):
         data = {'data':{'id': node, 'label': node}}
+        # highlight all path nodes and edges
         if node in path:
             data['classes']='path'
+            # highlight start and end of random walk
+            if i==0 or i==(n_steps-1):
+                data['classes']='anchor'
         else:
             data['classes']='basic'
         nodes.append(data)
@@ -175,7 +181,7 @@ def main():
         ]),
         dbc.Row([
             dbc.Col([
-                dcc.Dropdown(['Drake', 'Snoop Dogg', 'Elton John'], 'Drake', id='artist-dropdown'),
+                dcc.Dropdown(['Drake', 'Snoop Dogg', 'Elton John', 'Kendrick Lamar', 'Britney Spears'], 'Drake', id='artist-dropdown'),
             ], width=4),
             dbc.Col(
                 html.Div(children=[
@@ -183,6 +189,7 @@ def main():
                         id='cytoscape',
                         elements=[],
                         layout={'name': 'cose'},
+                        responsive=True,
                         stylesheet=[
                             # Group selectors
                             {
@@ -206,6 +213,13 @@ def main():
                                 'style': {
                                     'background-color': '#2f4b7c',
                                     'line-color': '#2f4b7c'
+                                }
+                            },
+                            {
+                                'selector': '.anchor',
+                                'style': {
+                                    'background-color': '#f95d6a',
+                                    'line-color': '#f95d6a'
                                 }
                             }
                         ]
@@ -245,7 +259,7 @@ def main():
         data = nodes
         data.extend(edges)
         elements = data
-        return elements if el == [] else []
+        return elements #if el == [] else []
 
 
 
