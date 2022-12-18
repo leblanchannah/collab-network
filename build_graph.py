@@ -131,13 +131,14 @@ def networkx_to_cyto(graph, path):
     nodes = []
     nx_node_data = list(graph.nodes)
     n_steps = len(nx_node_data)
+    end_node = path[-1]
     for i, node in enumerate(nx_node_data):
         data = {'data':{'id': node, 'label': node}}
         # highlight all path nodes and edges
         if node in path:
             data['classes']='path'
             # highlight start and end of random walk
-            if i==0 or i==(n_steps-1):
+            if i==0 or node==end_node:
                 data['classes']='anchor'
         else:
             data['classes']='basic'
@@ -154,6 +155,7 @@ def networkx_to_cyto(graph, path):
 
     return nodes, edges
 
+N_STEPS = 10
 def main():
 
     load_dotenv('../featuring_network.env')
@@ -163,7 +165,7 @@ def main():
     sp = spotipy.Spotify(auth_manager=SpotifyClientCredentials(client_id=client, client_secret=secret))
 
     graph = nx.Graph()
-    path = random_walk(graph, sp, 'Elton John', 20)
+    path = random_walk(graph, sp, 'Elton John', N_STEPS)
 
     nodes, edges = networkx_to_cyto(graph, path)
 
@@ -176,65 +178,61 @@ def main():
     app.layout = dbc.Container([
         dbc.Row([
             dbc.Col([
-                html.H1("Collaboration Network", style={'textAlign': 'center'})
+                html.H1("Collaboration Network", style={'textAlign': 'left'})
             ], width=12)
         ]),
         dbc.Row([
             dbc.Col([
+                html.P("Random walk length: "+ str(N_STEPS)),
                 dcc.Dropdown(['Drake', 'Snoop Dogg', 'Elton John', 'Kendrick Lamar', 'Britney Spears'], 'Drake', id='artist-dropdown'),
             ], width=4),
             dbc.Col(
-                html.Div(children=[
-                    cyto.Cytoscape(
-                        id='cytoscape',
-                        elements=[],
-                        layout={'name': 'cose'},
-                        responsive=True,
-                        stylesheet=[
-                            # Group selectors
-                            {
-                                'selector': 'node',
-                                'style': {
-                                    'content': 'data(label)',
-                                    'color': '#000000',
-                                    'background-color': '#d8d8d8'  
+                html.Div(
+                    style={'border':'2px black solid'},
+                    children=[
+                        cyto.Cytoscape(
+                            id='cytoscape',
+                            elements=[],
+                            layout={'name': 'cose'},
+                            responsive=True,
+                            stylesheet=[
+                                # Group selectors
+                                {
+                                    'selector': 'node',
+                                    'style': {
+                                        'content': 'data(label)',
+                                        'color': '#000000',
+                                        'background-color': '#d8d8d8'  
+                                    }
+                                },
+                                # Class selectors
+                                {
+                                    'selector': '.path',
+                                    'style': {
+                                        'background-color': '#ffa600',
+                                        'line-color': '#ffa600'
+                                    }
+                                },
+                                {
+                                    'selector': '.basic',
+                                    'style': {
+                                        'background-color': '#2f4b7c',
+                                        'line-color': '#2f4b7c'
+                                    }
+                                },
+                                {
+                                    'selector': '.anchor',
+                                    'style': {
+                                        'background-color': '#f95d6a',
+                                        'line-color': '#f95d6a'
+                                    }
                                 }
-                            },
-                            # Class selectors
-                            {
-                                'selector': '.path',
-                                'style': {
-                                    'background-color': '#ffa600',
-                                    'line-color': '#ffa600'
-                                }
-                            },
-                            {
-                                'selector': '.basic',
-                                'style': {
-                                    'background-color': '#2f4b7c',
-                                    'line-color': '#2f4b7c'
-                                }
-                            },
-                            {
-                                'selector': '.anchor',
-                                'style': {
-                                    'background-color': '#f95d6a',
-                                    'line-color': '#f95d6a'
-                                }
-                            }
-                        ]
-                    )
-                ]), width=8)
-        ])
-    ]
-    
-    # style={
-    # 'background-color': '#1E1E1E',
-    # 'color': '#d8d8d8',
-    # 'margin': 0,
-    # 'padding': 0
-    # }
-    )
+                            ]
+                    )]
+                ), width=8   
+        )])
+    ]   
+)
 
 
 
@@ -252,23 +250,17 @@ def main():
 
         sp = spotipy.Spotify(auth_manager=SpotifyClientCredentials(client_id=client, client_secret=secret))
         graph = nx.Graph()
-        path = random_walk(graph, sp, value, 20)
+        path = random_walk(graph, sp, value, N_STEPS)
 
         nodes, edges = networkx_to_cyto(graph, path)
 
         data = nodes
         data.extend(edges)
         elements = data
-        return elements #if el == [] else []
-
-
-
-
-
-
-
+        return elements 
 
     app.run_server(debug=True)
 
 
-main()
+if __name__ == "__main__":
+    main()
