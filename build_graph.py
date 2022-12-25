@@ -20,11 +20,16 @@ def add_artist(graph: nx.Graph, artist: Dict) -> None:
         graph: graph object to add new artist node to
         artist: artist data from Spotify API, must have uri, name, id, and href
     """
+    try:
+        genres = artist['genres']
+    except:
+        genres = []
     graph.add_node(
         artist['name'],
         uri=artist['uri'],
         id=artist['id'],
-        href=artist['href']
+        href=artist['href'],
+        genres=genres
     )
 
 def add_song(graph, artist_parent, artist_child, song_data) -> None:
@@ -48,42 +53,42 @@ def search_artist(artist_name: str, sp) -> Dict:
     Args:
         artist_name: string name used to search for artist on Spotify API
         sp:
-    Returns: 
+    Returns:
 
     """
     artist_query_result = sp.search(
-        q='artist:' + artist_name, 
-        type='artist', 
+        q='artist:' + artist_name,
+        type='artist',
         limit=1
     )
     return artist_query_result['artists']['items'][0]
 
 def get_albums(artist: nx.Graph, sp, type: str='single', limit: int=20, country:str='US') -> Dict:
-    """ Retrieves a set number of albums from spotify. 
+    """ Retrieves a set number of albums from spotify.
     There is no guarantee each album or single will have features.
     This function can be used to query albums or singles.
     Args:
         artist: artist node to use in search for albums
         sp:
         type: 'single' or 'album'
-        limit: number of albums 
+        limit: number of albums
         country: data availability
     Returns:
         Dictionary of results from API query, dict of songs
     """
     album_query_result = sp.artist_albums(
         artist['id'],
-        album_type=type, 
+        album_type=type,
         limit=limit,
         country=country
     )
     return album_query_result
- 
+
 
 
 def random_walk(graph: nx.Graph, sp, parent: str, n_steps: int, query_limit: int=20, album_type: str='single') -> List:
     """ Using artist name as seed for random walk of Spotify API calls.
-    Retrieves song and features (if found) from Spotify call and adds 
+    Retrieves song and features (if found) from Spotify call and adds
     new neighbor nodes and edges to graph.
     Args:
         graph: network graph to add nodes to
@@ -92,10 +97,10 @@ def random_walk(graph: nx.Graph, sp, parent: str, n_steps: int, query_limit: int
         n_steps: number of steps in random walk
         query_limit: maximum number of songs to return from Spotify
         album_type: 'single' or 'album'
-    Returns:    
+    Returns:
         List of nodes visited during random walk
     """
-    # adding first node in random walk to graph 
+    # adding first node in random walk to graph
     artist_node = search_artist(parent, sp)
     add_artist(graph, artist_node)
 
@@ -128,22 +133,28 @@ def networkx_to_cyto(graph, path):
 
     """
     nodes = []
-    nx_node_data = list(graph.nodes)
+    nx_node_data = graph.nodes(data=True)
     n_steps = len(nx_node_data)
     end_node = path[-1]
     for i, node in enumerate(nx_node_data):
-        data = {'data':{'id': node, 'label': node}}
+        name = node[0]
+        data = {
+            'data':node[1]
+        }
+        data['data']['id'] = name
+        data['data']['label'] = name
         # highlight all path nodes and edges
-        if node in path:
+        if name in path:
             data['classes']='path'
             # highlight start and end of random walk
-            if i==0 or node==end_node:
+            if i==0 or name==end_node:
                 data['classes']='anchor'
         else:
             data['classes']='basic'
         nodes.append(data)
 
     edges = []
+
     for edge in list(graph.edges):
         data = {'data':{'source': edge[0], 'target': edge[1], 'label':'single'}}
         if edge[0] in path and edge[1] in path:
@@ -156,12 +167,18 @@ def networkx_to_cyto(graph, path):
 
 N_STEPS = 10
 
+# project_folder = os.path.expanduser('~/collab-network')  # adjust as appropriate
+# load_dotenv(os.path.join(project_folder, 'featuring_network.env'))
+
 
 load_dotenv('../featuring_network.env')
 client = os.getenv('SPOTIFY_CLIENT', 'client')
 secret = os.getenv('SPOTIFY_SECRET', 'secret')
+# sp = spotipy.Spotify(auth_manager=SpotifyClientCredentials())
 
-sp = spotipy.Spotify(auth_manager=SpotifyClientCredentials(client_id=client, client_secret=secret))
+client_credentials_manager = SpotifyClientCredentials(client_id=client, client_secret=secret)
+sp = spotipy.Spotify(client_credentials_manager=client_credentials_manager)
+
 
 graph = nx.Graph()
 path = random_walk(graph, sp, 'Elton John', N_STEPS)
@@ -189,6 +206,7 @@ app.layout = dbc.Container([
             html.Div(
                 style={'border':'2px black solid'},
                 children=[
+                    html.P(id='cytoscape-tapNodeData-output'),
                     cyto.Cytoscape(
                         id='cytoscape',
                         elements=[],
@@ -201,7 +219,7 @@ app.layout = dbc.Container([
                                 'style': {
                                     'content': 'data(label)',
                                     'color': '#000000',
-                                    'background-color': '#d8d8d8'  
+                                    'background-color': '#d8d8d8'
                                 }
                             },
                             # Class selectors
@@ -227,14 +245,19 @@ app.layout = dbc.Container([
                                 }
                             }
                         ]
-                )]
-            ), width=8   
+                    )
+                ]
+                
+            ), width=8
     )])
-]   
+]
 )
 
-
-
+@app.callback(Output('cytoscape-tapNodeData-output', 'children'),
+              Input('cytoscape', 'tapNodeData'))
+def displayTapNodeData(data):
+    if data:
+        return 'Artist - '+ data['label'] #+'\nGenres - '+ ', '.join(data['genres'])
 
 @app.callback(
     Output("cytoscape", "elements"),
@@ -256,10 +279,7 @@ def update_output(value, el):
     data = nodes
     data.extend(edges)
     elements = data
-    return elements 
-
-
-
+    return elements
 
 if __name__ == "__main__":
-    app.run_server(debug=False)
+    app.run_server(debug=True)
